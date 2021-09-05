@@ -16,12 +16,15 @@
 
 //serial channel to use
 #define Port Serial1
+#define BAUDRATE 800000
 
 //#define USE_MOTORS      //if all the FOC stuff is runned
 
+//#define USE_BATTERY     //if gonna read supply voltage from battery
+const float DefaultSupplyVoltage = 14;
 
 
-
+// 0-> hip1, 1-> hip2, 2-> leg, 3-> knee
 #define MotorNumber 4
 
 #define BatteryPin 23
@@ -54,16 +57,22 @@
 #define M4CS 29
 
 
-float SupplyVoltage = 14;
+float SupplyVoltage = 0;
 
 //divider constant * Vref / analog resolution
 const float BatteryK = 6.01511 * 3.3 /1024;
 
 void UpdateBatteryVoltage(){
-  SupplyVoltage = analogRead(BatteryPin)*BatteryK;
+    #ifdef USE_BATTERY
+    SupplyVoltage = analogRead(BatteryPin)*BatteryK;
+    #else
+    SupplyVoltage = DefaultSupplyVoltage;
+    #endif
 
-  //update motor objects
-  //__________________
+    //update motor objects
+    for(uint8_t i=0; i<MotorNumber; i++){
+        MotorDrivers[i].voltage_power_supply = SupplyVoltage;
+    }
 }
 
 //constants
@@ -103,11 +112,13 @@ uint32_t Timer2t = 0;
 void setup() {
     pinMode(LED_BUILTIN,OUTPUT);
     digitalWrite(LED_BUILTIN,LOW);
-    Port.begin(800000);
+    Port.begin(BAUDRATE);
 
+    #ifdef Log
     Serial.begin(115200);
     for(byte i=0; i<14; i++){ digitalWrite(LED_BUILTIN,HIGH); delay(13); digitalWrite(LED_BUILTIN,LOW); delay(25); }
     LogPrintln("HelloWorld");
+    #endif
 
     bool ready=false;
     while(!ready){
@@ -135,12 +146,15 @@ void setup() {
     pinMode(M3CS, OUTPUT);
     pinMode(M4CS, OUTPUT);
 
+    UpdateBatteryVoltage();
+
     #ifdef USE_MOTORS
     MotorObjectsSetup();
     #endif
 
     for(byte i=0; i<8; i++){ digitalWrite(LED_BUILTIN,HIGH); delay(13); digitalWrite(LED_BUILTIN,LOW); delay(25); }
     digitalWrite(LED_BUILTIN,HIGH);
+    LogPrintln("Setup Done!");
 }
 
 

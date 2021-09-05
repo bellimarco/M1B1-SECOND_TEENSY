@@ -31,29 +31,37 @@ InlineCurrentSense MotorCurrSenses[MotorNumber] = {
     InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M4curA, M4curB)
 };
 
+//if gonna use the configgd values for initFOC
+const bool MotorUseZeroConfigs[MotorNumber] = {false,false,false,false};
+const float MotorZeroAngle[MotorNumber] = {5.46,0,0,0};
+//CCW -> 0, CW -> 1
+const Direction MotorZeroDirection[MotorNumber] = {Direction::CW,Direction::CW,Direction::CW,Direction::CW};
+
 void MotorObjectsSetup(){
+    for(byte i=0; i<MotorNumber; i++){
+        MotorEncoders[i].init();
+        Motors[i].linkSensor(&MotorEncoders[i]);
 
-  for(byte i=0; i<MotorNumber; i++){
-    MotorEncoders[i].init();
-    Motors[i].linkSensor(&MotorEncoders[i]);
+        MotorDrivers[i].voltage_power_supply = SupplyVoltage;
+        MotorDrivers[i].init();
+        Motors[i].linkDriver(&MotorDrivers[i]);
 
-    MotorDrivers[i].voltage_power_supply = SupplyVoltage;
-    MotorDrivers[i].init();
-    Motors[i].linkDriver(&MotorDrivers[i]);
+        MotorCurrSenses[i].init();
+        Motors[i].linkCurrentSense(&MotorCurrSenses[i]);
 
-    MotorCurrSenses[i].init();
-    Motors[i].linkCurrentSense(&MotorCurrSenses[i]);
+        Motors[i].foc_modulation = FOCModulationType::SpaceVectorPWM;
+        Motors[i].controller = MotionControlType::torque;
+        Motors[i].target = 0;
 
-    Motors[i].foc_modulation = FOCModulationType::SpaceVectorPWM;
-    Motors[i].controller = MotionControlType::torque;
-    Motors[i].target = 0;
+        Motors[i].voltage_limit = 5;
 
-    Motors[i].voltage_limit = 5;
+        Motors[i].useMonitoring(Serial);
 
-    Motors[i].useMonitoring(Serial);
-
-    Motors[i].init();
-    //Motors[i].initFOC(5.46,Direction::CW);
-    Motors[i].initFOC();
-  }
+        Motors[i].init();
+        if(MotorUseZeroConfigs[i]){
+            Motors[i].initFOC(MotorZeroAngle[i],MotorZeroDirection[i]);
+        }else{
+            Motors[i].initFOC();
+        }
+    }
 }
