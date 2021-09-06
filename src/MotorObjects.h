@@ -8,7 +8,7 @@
 #define powerFOCShieldGain 50
 
 
-BLDCMotor Motors[MotorNumber] = {BLDCMotor(12),BLDCMotor(12),BLDCMotor(12),BLDCMotor(12)};
+BLDCMotor Motors[MotorNumber] = {BLDCMotor(12),BLDCMotor(7),BLDCMotor(7),BLDCMotor(7)};
 
 BLDCDriver3PWM MotorDrivers[MotorNumber] = {
     BLDCDriver3PWM(M1pwmA, M1pwmB, M1pwmC),
@@ -26,9 +26,9 @@ MagneticSensorSPI MotorEncoders[MotorNumber] = {
 
 InlineCurrentSense MotorCurrSenses[MotorNumber] = {
     InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M1curA, M1curB),
-    InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M2curA, M2curB),
-    InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M3curA, M3curB),
-    InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M4curA, M4curB)
+    InlineCurrentSense(powerFOCShieldShunt, powerFOCShieldGain, M2curA, M2curB),
+    InlineCurrentSense(powerFOCShieldShunt, powerFOCShieldGain, M3curA, M3curB),
+    InlineCurrentSense(powerFOCShieldShunt, powerFOCShieldGain, M4curA, M4curB)
 };
 
 //if gonna use the configgd values for initFOC
@@ -53,7 +53,7 @@ void MotorObjectsSetup(){
         Motors[i].controller = MotionControlType::torque;
         Motors[i].target = 0;
 
-        Motors[i].voltage_limit = 5;
+        Motors[i].voltage_limit = 3;
 
         Motors[i].useMonitoring(Serial);
 
@@ -63,5 +63,12 @@ void MotorObjectsSetup(){
         }else{
             Motors[i].initFOC();
         }
+
+        //actual voltage limit is set manually
+        Motors[i].voltage_limit = 20;
+        Motors[i].move(0);
+
+        JointPosition[i] = Motors[i].shaft_angle*GearReduction[i];
+        JointVelocity[i] = Motors[i].shaft_velocity*GearReduction[i];
     }
 }

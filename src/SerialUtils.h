@@ -12,11 +12,11 @@ const byte parityMask = 0b00000001;
 void SerialSend(){
     byte *b;
     for(byte i=0; i<MotorNumber; i++){
-        b = (byte *) & Motors[i].LatestAngle;
+        b = (byte *) & JointPosition[i];
         for(byte j=0; j<4; j++){ datasendBytes[i][j] = b[j]; }
     }
     for(byte i=0; i<MotorNumber; i++){
-        b = (byte *) & Motors[i].LatestVelocity;
+        b = (byte *) & JointVelocity[i];
         for(byte j=0; j<4; j++){ datasendBytes[i+MotorNumber][j] = b[j]; }
     }
     byte parity=0;
@@ -82,8 +82,8 @@ class TeensyReader{
             //position control
             //was in torque control
             if(!MotorMode[i]){
-                V_PID[i].Reset(Motors[i].LatestAngle);
-                A_PID[i].Reset(Motors[i].LatestVelocity);
+                V_PID[i].Reset(JointPosition[i]);
+                A_PID[i].Reset(JointVelocity[i]);
             }
             MotorMode[i] = true;
             V_PID[i].SetTarget( val[i] );

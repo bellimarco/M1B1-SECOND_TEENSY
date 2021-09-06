@@ -5,6 +5,11 @@
 
 //CONFIGS
 
+//if you are programming teensy 1, teensy 1 constants will be set
+//  else teensy 2 constants will be set
+#define TEENSY1
+
+
 #define Log
 #ifdef Log
     #define LogPrintln(x) Serial.println(x)
@@ -57,37 +62,44 @@ const float DefaultSupplyVoltage = 14;
 #define M4CS 29
 
 
-float SupplyVoltage = 0;
 
 //divider constant * Vref / analog resolution
 const float BatteryK = 6.01511 * 3.3 /1024;
+float SupplyVoltage = DefaultSupplyVoltage;
 
 void UpdateBatteryVoltage(){
     #ifdef USE_BATTERY
     SupplyVoltage = analogRead(BatteryPin)*BatteryK;
     #else
     SupplyVoltage = DefaultSupplyVoltage;
-    #endif
 
     //update motor objects
     for(uint8_t i=0; i<MotorNumber; i++){
         MotorDrivers[i].voltage_power_supply = SupplyVoltage;
     }
+    #endif
 }
 
 //constants
-const float GearReduction[MotorNumber] = {10,10,10,10};
+#ifdef TEENSY1
+const float GearReduction[MotorNumber] = {1,1,1,1};
+const float TorqueToVoltage[MotorNumber] = {0.1,0.1,0.1,0.1};  //desired joint torque to required motor voltage constant
+#else
+const float GearReduction[MotorNumber] = {1,1,1,1};
+const float TorqueToVoltage[MotorNumber] = {0.1,0.1,0.1,0.1};
+#endif
 const float JointInertia[MotorNumber] = {1,1,1,1};     //joint acceleration to required joint torque constant, i.e. joint inertia
-const float TorqueToVoltage[MotorNumber] = {1,1,1,1};  //desired joint torque to required motor voltage constant
 const float TorqueJerk = 100;
+const float MaxVoltage = 3;
 
+float JointPosition[MotorNumber] = {0,0,0,0};
+float JointVelocity[MotorNumber] = {0,0,0,0};
 
 bool MotorMode[MotorNumber] = {false,false,false,false};   //0-> torque, 1-> position
-
 float PositionTarget[MotorNumber];
+float TorqueTarget[MotorNumber];    //set directly, or by position controller
 
-float TorqueTarget[MotorNumber];
-float Torque[MotorNumber];
+float Torque[MotorNumber];  //actual torque applied to motors (jerk adjusted torquetarget)
 
 
 
@@ -167,10 +179,15 @@ void loop() {
     if(ThisLoop>Timer1t){
         Timer1t = ThisLoop + Timer1T;
 
-        //test
         for(byte i=0; i<MotorNumber; i++){
-            Motors[i].LatestAngle += 0.1*(i+1);
-            Motors[i].LatestVelocity += -0.1*(i+1);
+            #ifdef USE_MOTORS
+            JointPosition[i] = Motors[i].shaft_angle*GearReduction[i];
+            JointVelocity[i] = Motors[i].shaft_velocity*GearReduction[i];
+            #else
+            //test
+            JointPosition[i] += 0.1*(i+1);
+            JointVelocity[i] += -0.1*(i+1);
+            #endif
         }
 
         SerialSend();
@@ -182,12 +199,15 @@ void loop() {
 
         TR.run();
 
+        #ifdef USE_MOTORS
         for(byte i = 0; i < MotorNumber; i++){
+            JointPosition[i] = Motors[i].shaft_angle*GearReduction[i];
+            JointVelocity[i] = Motors[i].shaft_velocity*GearReduction[i];
 
             if(MotorMode[i]){
                 //position control, -> torque target determined by PID loops
-                A_PID[i].SetTarget(V_PID[i].Get(LoopDT,Motors[i].LatestAngle));
-                TorqueTarget[i] = A_PID[i].Get(LoopDT,Motors[i].LatestVelocity) * JointInertia[i];
+                A_PID[i].SetTarget(V_PID[i].Get(LoopDT,JointPosition[i]));
+                TorqueTarget[i] = A_PID[i].Get(LoopDT,JointVelocity[i]) * JointInertia[i];
             }
             //else: torquetarget already set by SerialComm
 
@@ -197,10 +217,9 @@ void loop() {
                 Torque[i] = TorqueTarget[i];
             }
 
-            #ifdef USE_MOTORS
-            Motors[i].move(Torque[i]*TorqueToVoltage[i]);
-            #endif
+            Motors[i].move(min(Torque[i]*TorqueToVoltage[i],MaxVoltage));
         }
+       #endif
     }
 
     
