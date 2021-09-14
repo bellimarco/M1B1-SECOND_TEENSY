@@ -24,6 +24,23 @@
 #define BAUDRATE 800000
 
 //#define USE_MOTORS      //if all the FOC stuff is runned
+#ifdef USE_MOTORS
+    #define USE_MOTORSAFEMODE   //motors voltage is not set, foc voltage target remains 0 from setup
+#endif
+
+
+#define SENDENCODERS    //if encoder information is sent to the main teensy port
+
+//send encoder data timer
+const uint32_t Timer1T = 50000; //micros
+uint32_t Timer1t = 0;
+//check serial commands, update motor targets
+const uint32_t Timer2T = 1000; //micros
+uint32_t Timer2t = 0;
+
+
+
+
 
 //#define USE_BATTERY     //if gonna read supply voltage from battery
 const float DefaultSupplyVoltage = 14;
@@ -82,10 +99,10 @@ void UpdateBatteryVoltage(){
 
 //constants
 #ifdef TEENSY1
-const float GearReduction[MotorNumber] = {1,1,1,1};
+const float GearReduction[MotorNumber] = {0.125,0.11,0.05,0.06};
 const float TorqueToVoltage[MotorNumber] = {0.1,0.1,0.1,0.1};  //desired joint torque to required motor voltage constant
 #else
-const float GearReduction[MotorNumber] = {1,1,1,1};
+const float GearReduction[MotorNumber] = {0.125,0.11,0.05,0.06};
 const float TorqueToVoltage[MotorNumber] = {0.1,0.1,0.1,0.1};
 #endif
 const float JointInertia[MotorNumber] = {1,1,1,1};     //joint acceleration to required joint torque constant, i.e. joint inertia
@@ -97,7 +114,7 @@ float JointVelocity[MotorNumber] = {0,0,0,0};
 
 bool MotorMode[MotorNumber] = {false,false,false,false};   //0-> torque, 1-> position
 float PositionTarget[MotorNumber];
-float TorqueTarget[MotorNumber];    //set directly, or by position controller
+float TorqueTarget[MotorNumber];    //set directly, or indirectly by position controller
 
 float Torque[MotorNumber];  //actual torque applied to motors (jerk adjusted torquetarget)
 
@@ -112,13 +129,6 @@ float Torque[MotorNumber];  //actual torque applied to motors (jerk adjusted tor
 unsigned long ThisLoop = 0;
 unsigned long LastLoop = 0; //timestamp of last loop
 float LoopDT = 0;           //seconds passed since last loop
-
-//send encoder data timer
-const uint32_t Timer1T = 50000; //micros
-uint32_t Timer1t = 0;
-//check serial commands, update motor targets
-const uint32_t Timer2T = 1000; //micros
-uint32_t Timer2t = 0;
 
 
 void setup() {
@@ -176,6 +186,8 @@ void loop() {
     LoopDT = ((float)(ThisLoop-LastLoop))*1e-6;
     LastLoop = ThisLoop;
 
+
+    #ifdef SENDENCODERS
     if(ThisLoop>Timer1t){
         Timer1t = ThisLoop + Timer1T;
 
@@ -192,6 +204,9 @@ void loop() {
 
         SerialSend();
     }
+    #endif
+
+
     if(ThisLoop>Timer2t){
         Timer2t = ThisLoop + Timer2T;
 
@@ -217,7 +232,9 @@ void loop() {
                 Torque[i] = TorqueTarget[i];
             }
 
+            #ifndef USE_MOTORSAFEMODE
             Motors[i].move(min(Torque[i]*TorqueToVoltage[i],MaxVoltage));
+            #endif
         }
        #endif
     }

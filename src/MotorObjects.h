@@ -1,6 +1,7 @@
 
 #include <SimpleFOC.h>
 
+
 //motor stuff
 #define FOCShieldShunt 0.006
 #define FOCShieldGain 100
@@ -24,6 +25,7 @@ MagneticSensorSPI MotorEncoders[MotorNumber] = {
     MagneticSensorSPI(AS5147_SPI, M4CS)
 };
 
+bool MotorUseCurrSense[MotorNumber] = {false,false,false,false};
 InlineCurrentSense MotorCurrSenses[MotorNumber] = {
     InlineCurrentSense(FOCShieldShunt, FOCShieldGain, M1curA, M1curB),
     InlineCurrentSense(powerFOCShieldShunt, powerFOCShieldGain, M2curA, M2curB),
@@ -46,8 +48,10 @@ void MotorObjectsSetup(){
         MotorDrivers[i].init();
         Motors[i].linkDriver(&MotorDrivers[i]);
 
-        MotorCurrSenses[i].init();
-        Motors[i].linkCurrentSense(&MotorCurrSenses[i]);
+        if(MotorUseCurrSense[i]){
+            MotorCurrSenses[i].init();
+            Motors[i].linkCurrentSense(&MotorCurrSenses[i]);
+        }
 
         Motors[i].foc_modulation = FOCModulationType::SpaceVectorPWM;
         Motors[i].controller = MotionControlType::torque;
