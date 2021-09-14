@@ -9,7 +9,7 @@
 #define powerFOCShieldGain 50
 
 
-BLDCMotor Motors[MotorNumber] = {BLDCMotor(12),BLDCMotor(7),BLDCMotor(7),BLDCMotor(7)};
+BLDCMotor Motors[MotorNumber] = {BLDCMotor(12),BLDCMotor(12),BLDCMotor(7),BLDCMotor(7)};
 
 BLDCDriver3PWM MotorDrivers[MotorNumber] = {
     BLDCDriver3PWM(M1pwmA, M1pwmB, M1pwmC),
@@ -41,10 +41,11 @@ const Direction MotorZeroDirection[MotorNumber] = {Direction::CW,Direction::CW,D
 
 void MotorObjectsSetup(){
     for(byte i=0; i<MotorNumber; i++){
+        LogPrintln("\nMotorSetup "+String(i)+":");
         MotorEncoders[i].init();
         Motors[i].linkSensor(&MotorEncoders[i]);
 
-        MotorDrivers[i].voltage_power_supply = SupplyVoltage;
+        MotorDrivers[i].voltage_power_supply = DefaultSupplyVoltage;
         MotorDrivers[i].init();
         Motors[i].linkDriver(&MotorDrivers[i]);
 

@@ -73,7 +73,8 @@ class TeensyReader{
         #ifdef Log_MotorControl
         LogPrint("Control:  ");
         for(byte i=0; i<MotorNumber; i++){
-            LogPrint(" ("+valMode[i]?"ps, ":"tq, ");
+            LogPrint(" (");
+            LogPrint(valMode[i]?"ps, ":"tq, ");
             LogPrint(val[i]); LogPrint(")");
         }
         LogPrintln();
