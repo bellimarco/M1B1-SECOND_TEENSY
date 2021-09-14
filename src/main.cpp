@@ -14,6 +14,7 @@
 #ifdef Log
     #define LogPrintln(x) Serial.println(x)
     #define LogPrint(x) Serial.print(x)
+    #define Log_MotorControl    //print every received motor control
 #else
     #define LogPrintln(x)
     #define LogPrint(x)
@@ -91,9 +92,11 @@ void UpdateBatteryVoltage(){
     SupplyVoltage = DefaultSupplyVoltage;
 
     //update motor objects
+    #ifdef USE_MOTORS
     for(uint8_t i=0; i<MotorNumber; i++){
         MotorDrivers[i].voltage_power_supply = SupplyVoltage;
     }
+    #endif
     #endif
 }
 

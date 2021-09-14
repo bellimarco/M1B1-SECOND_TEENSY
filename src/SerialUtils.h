@@ -70,12 +70,14 @@ class TeensyReader{
     TeensyReader(){}
 
     void callback(){
-        LogPrint("[mode,targ]:  ");
+        #ifdef Log_MotorControl
+        LogPrint("Control:  ");
         for(byte i=0; i<MotorNumber; i++){
-            LogPrint(valMode[i]); LogPrint(" ");
-            LogPrint(val[i]); LogPrint(",  ");
+            LogPrint(" ("+valMode[i]?"ps, ":"tq, ");
+            LogPrint(val[i]); LogPrint(")");
         }
         LogPrintln();
+        #endif
 
         for(byte i=0; i<MotorNumber; i++){
             if(!valMode[i]){
